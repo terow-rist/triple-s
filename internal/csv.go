@@ -29,7 +29,7 @@ func writeCSV(bucketName string) {
 	}
 }
 
-func readCSV(bucketName string) bool {
+func readCSV() [][]string {
 	file, err := os.OpenFile("buckets/buckets.csv", os.O_CREATE, 0644)
 	if err != nil {
 		fmt.Println("Error: ", err)
@@ -44,18 +44,15 @@ func readCSV(bucketName string) bool {
 		os.Exit(1)
 	}
 
-	for _, v := range records {
-		if elementExists(v, bucketName) {
-			return true
-		}
-	}
-	return false
+	return records
 }
 
-func elementExists(slice []string, element string) bool {
-	for _, v := range slice {
-		if v == element {
-			return true
+func elementExists(element string) bool {
+	for _, row := range readCSV() {
+		for _, bucket := range row {
+			if bucket == element {
+				return true
+			}
 		}
 	}
 	return false

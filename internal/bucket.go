@@ -22,17 +22,17 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err := validateBucketName(bucketName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotAcceptable)
+		http.Error(w, "Error: "+err.Error(), http.StatusNotAcceptable)
 		return
 	}
-	if readCSV(bucketName) {
+	if elementExists(bucketName) {
 		http.Error(w, "Error: The bucket name is already in use.", http.StatusConflict)
 		return
 	}
 
 	err = os.Mkdir(filepath.Join("buckets", filepath.Join(config.Directory, bucketName)), 0755)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -42,13 +42,54 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Succesfull creation of bucket!")
 }
 
+// NOT FINISHED
 func GetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Error: only GET command in /get/ url.", http.StatusMethodNotAllowed)
 		return
 	}
+	if len(r.URL.Path[len("/get/"):]) > 0 {
+		http.Error(w, "Error: too much data after '/get/'", http.StatusConflict)
+		return
+	}
 
-	fmt.Fprintln(w, "NOTHING")
+	fmt.Fprintln(w, len(r.URL.Path[len("/get/"):]))
+}
+
+func DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Error: only DELETE command in /delete/ url.", http.StatusMethodNotAllowed)
+		return
+	}
+	target := r.URL.Path[len("/delete/"):]
+	if target == "" {
+		http.Error(w, "Error: bucket name cannot be empty.", http.StatusBadRequest)
+		return
+	}
+
+	path := "buckets/" + target
+	if elementExists(target) {
+		if is, err := isBucketEmpty(path); err != nil {
+			http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+			return
+		} else if is {
+			err = os.Remove(path)
+			if err != nil {
+				http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+		} else {
+			http.Error(w, "Error: bucket is not empty.", http.StatusConflict)
+			return
+		}
+	} else {
+		http.Error(w, "Error: bucket does not exist.", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	fmt.Fprintf(w, "Deleted %s bucket\n", target)
 }
 
 // NOT FINISHED
@@ -66,4 +107,13 @@ func validateBucketName(name string) error {
 	}
 
 	return nil
+}
+
+func isBucketEmpty(path string) (bool, error) {
+	dirEntries, err := os.ReadDir(path)
+	if err != nil {
+		return false, err
+	}
+
+	return len(dirEntries) == 0, nil
 }
