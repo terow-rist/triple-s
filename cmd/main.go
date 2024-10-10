@@ -1,40 +1,34 @@
 package main
 
 import (
+	"encoding/csv"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
+	"triple-s/config"
 )
 
-var (
-	portNumber string
-	directory  string
-)
-
-func init() {
-	flag.StringVar(&portNumber, "port", "8080", "Port number")
-	flag.StringVar(&directory, "dir", "", "Path to the directory")
-
-	helpMessage :=
-		`Simple Storage Service.
-
-**Usage:**
-	triple-s [-port <N>] [-dir <S>]  
-	triple-s --help
-
-**Options:**
-- --help     Show this screen.
-- --port N   Port number
-- --dir S    Path to the directory`
-
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, helpMessage)
+func writeCSV(bucketName string) {
+	// Create if not exists
+	file, err := os.OpenFile("buckets/buckets.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
 	}
-	flag.Parse()
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	err = writer.Write([]string{bucketName, time.Now().Format("2006/01/02 15:04:05")})
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
 }
 
 func putHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +47,10 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotAcceptable)
 		return
 	}
-	err = os.Mkdir(filepath.Join(directory, bucketName), 0755)
+
+	writeCSV(bucketName)
+
+	err = os.Mkdir(filepath.Join("buckets", filepath.Join(config.Directory, bucketName)), 0755)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -90,7 +87,8 @@ func validateBucketName(name string) error {
 }
 
 func main() {
+	log.Printf("http://localhost:%s/\n", config.PortNumber)
 	http.HandleFunc("/put/", putHandler)
 	http.HandleFunc("/get/", getHandler)
-	log.Fatal(http.ListenAndServe(":"+portNumber, nil))
+	log.Fatal(http.ListenAndServe(":"+config.PortNumber, nil))
 }
