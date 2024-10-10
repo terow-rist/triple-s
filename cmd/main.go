@@ -12,8 +12,16 @@ import (
 	"triple-s/config"
 )
 
+func elementExists(slice []string, element string) bool {
+	for _, v := range slice {
+		if v == element {
+			return true
+		}
+	}
+	return false
+}
+
 func writeCSV(bucketName string) {
-	// Create if not exists
 	file, err := os.OpenFile("buckets/buckets.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("Error: ", err)
@@ -24,11 +32,38 @@ func writeCSV(bucketName string) {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
+	if fileInfo, _ := os.Stat(file.Name()); fileInfo.Size() == 0 {
+		writer.Write([]string{"NameOfBucket", "DateOfCreation"})
+	}
+
 	err = writer.Write([]string{bucketName, time.Now().Format("2006/01/02 15:04:05")})
 	if err != nil {
 		fmt.Println("Error: ", err)
 		os.Exit(1)
 	}
+}
+
+func readCSV(bucketName string) bool {
+	file, err := os.OpenFile("buckets/buckets.csv", os.O_CREATE, 0644)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+
+	for _, v := range records {
+		if elementExists(v, bucketName) {
+			return true
+		}
+	}
+	return false
 }
 
 func putHandler(w http.ResponseWriter, r *http.Request) {
@@ -48,13 +83,18 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeCSV(bucketName)
-
 	err = os.Mkdir(filepath.Join("buckets", filepath.Join(config.Directory, bucketName)), 0755)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	if readCSV(bucketName) {
+		http.Error(w, "Error: The bucket name is already in use.", http.StatusConflict)
+		return
+	}
+
+	writeCSV(bucketName)
 
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, "Succesfull creation of bucket!")
