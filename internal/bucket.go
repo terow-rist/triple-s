@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
 	"triple-s/config"
 )
 
@@ -25,18 +26,27 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: "+err.Error(), http.StatusNotAcceptable)
 		return
 	}
-	if elementExists(bucketName) {
+	elementIn, err := elementExists(bucketName)
+	if err != nil {
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if elementIn {
 		http.Error(w, "Error: The bucket name is already in use.", http.StatusConflict)
 		return
 	}
 
-	err = os.Mkdir(filepath.Join("buckets", filepath.Join(config.Directory, bucketName)), 0755)
+	err = os.Mkdir(filepath.Join("buckets", filepath.Join(config.Directory, bucketName)), 0o755)
 	if err != nil {
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeCSV(bucketName)
+	err = writeCSV(bucketName)
+	if err != nil {
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintln(w, "Succesfull creation of bucket!")
@@ -68,7 +78,12 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := "buckets/" + target
-	if elementExists(target) {
+	elementIn, err := elementExists(target)
+	if err != nil {
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if elementIn {
 		if is, err := isBucketEmpty(path); err != nil {
 			http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -78,6 +93,13 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
+			err = deleteRecord(target)
+			if err != nil {
+				http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
 
 		} else {
 			http.Error(w, "Error: bucket is not empty.", http.StatusConflict)
@@ -87,9 +109,6 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: bucket does not exist.", http.StatusNotFound)
 		return
 	}
-
-	w.WriteHeader(http.StatusNoContent)
-	fmt.Fprintf(w, "Deleted %s bucket\n", target)
 }
 
 // NOT FINISHED
