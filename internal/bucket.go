@@ -77,6 +77,11 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: too much data after '/get/'", http.StatusConflict)
 		return
 	}
+	// checking that '--dir=' is standard or not
+	if isStandardPackage(config.Directory) {
+		http.Error(w, "Error: directory('--dir=') cannot be one of the used ones.", http.StatusBadRequest)
+		return
+	}
 	xmlData, err := listAllMyBucketsResult()
 	if err != nil {
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
@@ -98,7 +103,11 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: bucket name cannot be empty.", http.StatusBadRequest)
 		return
 	}
-
+	// checking that '--dir=' is standard or not
+	if isStandardPackage(config.Directory) {
+		http.Error(w, "Error: directory('--dir=') cannot be one of the used ones.", http.StatusBadRequest)
+		return
+	}
 	// checking for existing bucket
 	path := config.Directory + "/" + target
 	elementIn, err := elementExists(target)
