@@ -10,7 +10,7 @@ import (
 )
 
 func PutHandler(w http.ResponseWriter, r *http.Request) {
-	// http errors
+	// http errors handling
 	if r.Method != http.MethodPut {
 		http.Error(w, "Error: only PUT command for /put/ url.", http.StatusMethodNotAllowed)
 		return
@@ -35,14 +35,9 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// checking that '--dir=' is empty
-	is, err := isBucketEmpty(config.Directory)
-	if err != nil {
-		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !is {
-		http.Error(w, "Error: directory from '--dir=' is not empty.", http.StatusConflict)
+	// checking that '--dir=' is standard or not
+	if isStandardPackage(config.Directory) {
+		http.Error(w, "Error: directory('--dir=') cannot be one of the used ones.", http.StatusBadRequest)
 		return
 	}
 	// checking the uniqueness of bucket name
@@ -72,8 +67,8 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Succesfull creation of bucket!") // NOT IN XML < REFACTOR!!!
 }
 
-// NOT FINISHED
 func GetHandler(w http.ResponseWriter, r *http.Request) {
+	// http errors checking
 	if r.Method != http.MethodGet {
 		http.Error(w, "Error: only GET command in /get/ url.", http.StatusMethodNotAllowed)
 		return
@@ -82,11 +77,18 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: too much data after '/get/'", http.StatusConflict)
 		return
 	}
-
-	fmt.Fprintln(w, len(r.URL.Path[len("/get/"):]))
+	xmlData, err := listAllMyBucketsResult()
+	if err != nil {
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/xml")
+	w.WriteHeader(http.StatusOK)
+	w.Write(xmlData)
 }
 
 func DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	// http errors handling
 	if r.Method != http.MethodDelete {
 		http.Error(w, "Error: only DELETE command in /delete/ url.", http.StatusMethodNotAllowed)
 		return
@@ -97,6 +99,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// checking for existing bucket
 	path := config.Directory + "/" + target
 	elementIn, err := elementExists(target)
 	if err != nil {
@@ -155,4 +158,8 @@ func isBucketEmpty(path string) (bool, error) {
 	}
 
 	return len(dirEntries) == 0, nil
+}
+
+func isStandardPackage(packageName string) bool {
+	return packageName == "cmd" || packageName == "config" || packageName == "internal"
 }
