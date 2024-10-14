@@ -3,6 +3,7 @@ package internal
 import (
 	"encoding/xml"
 	"errors"
+	"net/http"
 )
 
 type Bucket struct {
@@ -19,6 +20,12 @@ type Buckets struct {
 type ListAllMyBucketsResult struct {
 	XMLName xml.Name `xml:"ListAllMyBucketsResult"`
 	Buckets Buckets  `xml:"Buckets"`
+}
+
+type ErrorResponse struct {
+	XMLName    xml.Name `xml:"Error"`
+	StatusCode string   `xml:"StatusCode"`
+	Message    string   `xml:"Message"`
 }
 
 func listAllMyBucketsResult() ([]byte, error) {
@@ -53,4 +60,20 @@ func listAllMyBucketsResult() ([]byte, error) {
 	}
 	xmlData = append(xmlData, '\n')
 	return xmlData, nil
+}
+
+func writeXMLError(w http.ResponseWriter, statusCode, message string, code int) {
+	errorResponse := ErrorResponse{
+		StatusCode: statusCode,
+		Message:    message,
+	}
+	xmlData, err := xml.MarshalIndent(errorResponse, "", "   ")
+	if err != nil {
+		errorResponse.StatusCode = "Internal Server Error"
+		errorResponse.Message = "Error: error in xml.MarshalIndent"
+	}
+	xmlData = append(xmlData, '\n')
+	w.Header().Set("Content-Type", "application/xml")
+	w.WriteHeader(code)
+	w.Write(xmlData)
 }
