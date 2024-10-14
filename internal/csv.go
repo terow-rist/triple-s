@@ -17,7 +17,9 @@ func writeCSV(bucketName string) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	if fileInfo, _ := os.Stat(file.Name()); fileInfo.Size() == 0 {
+	if fileInfo, err := os.Stat(file.Name()); err != nil {
+		return err
+	} else if fileInfo.Size() == 0 {
 		writer.Write([]string{"NameOfBucket", "DateOfCreation"})
 	}
 

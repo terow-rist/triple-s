@@ -97,7 +97,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := "buckets/" + target
+	path := config.Directory + "/" + target
 	elementIn, err := elementExists(target)
 	if err != nil {
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
