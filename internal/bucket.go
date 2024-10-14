@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -107,6 +106,17 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "BadRequest", "Error: directory(--dir=) cannot be one of the used ones.", http.StatusBadRequest)
 		return
 	}
+	// handle if bucket does not exists
+	is, err := isBucketEmpty(config.Directory)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if is {
+		writeXMLError(w, "NotFound", "Error: bucket does not exist.", http.StatusNotFound)
+		return
+	}
+
 	// checking for existing bucket
 	path := config.Directory + "/" + target
 	elementIn, err := elementExists(target)
@@ -115,7 +125,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if elementIn {
-		if is, err := isBucketEmpty(path); err != nil {
+		if is, err = isBucketEmpty(path); err != nil {
 			writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 			return
 		} else if is {
@@ -140,34 +150,4 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "NotFound", "Error: bucket does not exist.", http.StatusNotFound)
 		return
 	}
-}
-
-// NOT FINISHED
-func validateBucketName(name string) error {
-	err := errors.New("Error: does not meet Amazon S3 naming requirements.")
-
-	if len(name) < 3 || len(name) > 63 {
-		return err
-	}
-
-	for _, char := range name {
-		if !(char >= 'a' && char <= 'z' || char >= '0' && char <= '9' || char == '-' || char == '.') {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func isBucketEmpty(path string) (bool, error) {
-	dirEntries, err := os.ReadDir(path)
-	if err != nil {
-		return false, err
-	}
-
-	return len(dirEntries) == 0, nil
-}
-
-func isStandardPackage(packageName string) bool {
-	return packageName == "cmd" || packageName == "config" || packageName == "internal"
 }
