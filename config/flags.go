@@ -12,7 +12,7 @@ var (
 
 func init() {
 	flag.StringVar(&PortNumber, "port", "8080", "Port number")
-	flag.StringVar(&Directory, "dir", "", "Path to the directory")
+	flag.StringVar(&Directory, "dir", "data", "Path to the directory")
 
 	helpMessage :=
 		`Simple Storage Service.

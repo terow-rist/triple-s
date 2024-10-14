@@ -4,10 +4,11 @@ import (
 	"encoding/csv"
 	"os"
 	"time"
+	"triple-s/config"
 )
 
 func writeCSV(bucketName string) error {
-	file, err := os.OpenFile("buckets/buckets.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
@@ -28,7 +29,7 @@ func writeCSV(bucketName string) error {
 }
 
 func readCSV() ([][]string, error) {
-	file, err := os.OpenFile("buckets/buckets.csv", os.O_CREATE, 0o644)
+	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_CREATE, 0o644)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func readCSV() ([][]string, error) {
 }
 
 func deleteRecord(target string) error {
-	file, err := os.OpenFile("buckets/buckets.csv", os.O_RDWR, 0o644)
+	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_RDWR, 0o644)
 	if err != nil {
 		return err
 	}

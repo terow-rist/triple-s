@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
 	"triple-s/config"
 )
 
 func PutHandler(w http.ResponseWriter, r *http.Request) {
+	// http errors
 	if r.Method != http.MethodPut {
 		http.Error(w, "Error: only PUT command for /put/ url.", http.StatusMethodNotAllowed)
 		return
@@ -21,11 +21,31 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: bucket name cannot be empty.", http.StatusBadRequest)
 		return
 	}
+	// checking the correctness of bucket name
 	err := validateBucketName(bucketName)
 	if err != nil {
 		http.Error(w, "Error: "+err.Error(), http.StatusNotAcceptable)
 		return
 	}
+	// checking that --dir=path exists
+	if _, err = os.Stat(config.Directory); os.IsNotExist(err) {
+		err = os.Mkdir(config.Directory, 0755)
+		if err != nil {
+			http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	// checking that '--dir=' is empty
+	is, err := isBucketEmpty(config.Directory)
+	if err != nil {
+		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !is {
+		http.Error(w, "Error: directory from '--dir=' is not empty.", http.StatusConflict)
+		return
+	}
+	// checking the uniqueness of bucket name
 	elementIn, err := elementExists(bucketName)
 	if err != nil {
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
@@ -35,21 +55,21 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error: The bucket name is already in use.", http.StatusConflict)
 		return
 	}
-
-	err = os.Mkdir(filepath.Join("buckets", filepath.Join(config.Directory, bucketName)), 0o755)
+	// the creation of bucket
+	err = os.Mkdir(filepath.Join(config.Directory, bucketName), 0o755)
 	if err != nil {
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	// fullfilling the bucket metadata
 	err = writeCSV(bucketName)
 	if err != nil {
 		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	// the finish line
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, "Succesfull creation of bucket!")
+	fmt.Fprintln(w, "Succesfull creation of bucket!") // NOT IN XML < REFACTOR!!!
 }
 
 // NOT FINISHED
