@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
 	"triple-s/config"
 )
 
@@ -23,7 +22,7 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 	// checking the correctness of bucket name
 	err := validateBucketName(bucketName)
 	if err != nil {
-		writeXMLError(w, "NotAcceptable", "Error: "+err.Error(), http.StatusNotAcceptable)
+		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// checking that --dir=path exists
