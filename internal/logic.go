@@ -6,29 +6,39 @@ import (
 	"regexp"
 )
 
-// understand regexp and finish this function!!!
 func validateBucketName(name string) error {
-	// Regex for valid bucket name format
-	validBucketName := regexp.MustCompile(`^[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?$`)
-	// Regex to prevent IP address format
-	ipFormat := regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$`)
+	validBucketName := regexp.MustCompile(`^[a-z0-9.](?:[a-z0-9.-]*[a-z0-9.])?$`)
+	ipFormat := regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}$`)
 
-	// Length check
 	if len(name) < 3 || len(name) > 63 {
 		return errors.New("Error: Bucket name must be between 3 and 63 characters long.")
 	}
 
-	// Validate characters
 	if !validBucketName.MatchString(name) {
 		return errors.New("Error: Bucket name contains invalid characters.")
 	}
 
-	// Check for IP address-like format
 	if ipFormat.MatchString(name) {
 		return errors.New("Error: Bucket name must not be formatted like an IP address.")
 	}
 
+	if checkConsecutive(name) {
+		return errors.New("Error: Bucket must not contain two consecutive periods or dashes.")
+	}
+
 	return nil
+}
+
+func checkConsecutive(str string) bool {
+	for i := 0; i < len(str)-1; i++ {
+		if str[i] == '.' && str[i+1] == '.' {
+			return true
+		}
+		if str[i] == '-' && str[i+1] == '-' {
+			return true
+		}
+	}
+	return false
 }
 
 func isBucketEmpty(path string) (bool, error) {
