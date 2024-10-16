@@ -29,7 +29,7 @@ type ErrorResponse struct {
 }
 
 func listAllMyBucketsResult() ([]byte, error) {
-	records, err := readBucketCSV()
+	records, err := readCSV("/buckets.csv")
 	if err != nil {
 		return nil, err
 	}

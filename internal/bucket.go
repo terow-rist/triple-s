@@ -39,7 +39,7 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// checking the uniqueness of bucket name
-	elementIn, err := elementExists(bucketName)
+	elementIn, err := elementExists("/buckets.csv", bucketName)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -118,7 +118,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	// checking for existing bucket
 	path := config.Directory + "/" + target
-	elementIn, err := elementExists(target)
+	elementIn, err := elementExists("/buckets.csv", target)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -133,7 +133,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 				writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
-			err = deleteRecord(target)
+			err = deleteRecord("/buckets.csv", target)
 			if err != nil {
 				writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 				return

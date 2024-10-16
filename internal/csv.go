@@ -32,7 +32,8 @@ func writeBucketCSV(bucketName string) error {
 
 //
 func writeObjectCSV(bucketName string, o ObjectMD) error {
-	file, err := os.OpenFile(config.Directory+"/"+bucketName+"/objects.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	path := "/" + bucketName + "/objects.csv"
+	file, err := os.OpenFile(config.Directory+path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
@@ -46,7 +47,13 @@ func writeObjectCSV(bucketName string, o ObjectMD) error {
 	} else if fileInfo.Size() == 0 {
 		writer.Write([]string{"ObjectKey", "Size", "ContentType", "LastModified"})
 	}
-
+	is, err := elementExists(path, o.ObjectKey)
+	if err != nil {
+		return err
+	}
+	if is {
+		deleteRecord(path, o.ObjectKey)
+	}
 	err = writer.Write([]string{o.ObjectKey, o.Size, o.ContentType, o.LastModified})
 	if err != nil {
 		return err
@@ -54,8 +61,8 @@ func writeObjectCSV(bucketName string, o ObjectMD) error {
 	return nil
 }
 
-func readBucketCSV() ([][]string, error) {
-	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_CREATE, 0o644)
+func readCSV(path string) ([][]string, error) {
+	file, err := os.OpenFile(config.Directory+path, os.O_CREATE, 0o644)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +77,8 @@ func readBucketCSV() ([][]string, error) {
 	return records, nil
 }
 
-func deleteRecord(target string) error {
-	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_RDWR, 0o644)
+func deleteRecord(path, target string) error {
+	file, err := os.OpenFile(config.Directory+path, os.O_RDWR, 0o644)
 	if err != nil {
 		return err
 	}
@@ -103,8 +110,8 @@ func deleteRecord(target string) error {
 	return nil
 }
 
-func elementExists(element string) (bool, error) {
-	records, err := readBucketCSV()
+func elementExists(path, element string) (bool, error) {
+	records, err := readCSV(path)
 	if err != nil {
 		return false, err
 	}
