@@ -61,25 +61,24 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contentType := r.Header.Get("Content-Type")
-	// contentLength := r.Header.Get("Content-Length")
+	contentLength := r.Header.Get("Content-Length")
 
 	if contentType == "" {
 		writeXMLError(w, "BadRequest", "Error: Content-Type cannot be empty.", http.StatusBadRequest)
 		return
 	}
-	// if contentLength == "" {
-	// 	writeXMLError(w, "BadRequest", "Error: Content-Length cannot be empty.", http.StatusBadRequest)
-	// 	return
-	// }
-
-	fileInfo, err := file.Stat()
-	if err != nil {
-		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
-		return
+	if contentLength == "" {
+		fileInfo, err := file.Stat()
+		if err != nil {
+			writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		contentLength = strconv.FormatInt(fileInfo.Size(), 10)
 	}
+
 	o := ObjectMD{
 		ObjectKey:    objectKey,
-		Size:         strconv.FormatInt(fileInfo.Size(), 10),
+		Size:         contentLength,
 		ContentType:  contentType,
 		LastModified: time.Now().Format("2006/01/02 15:04:05"),
 	}
