@@ -55,7 +55,7 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// fullfilling the bucket metadata
-	err = writeCSV(bucketName)
+	err = writeBucketCSV(bucketName)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return

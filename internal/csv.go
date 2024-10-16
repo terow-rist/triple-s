@@ -7,7 +7,7 @@ import (
 	"triple-s/config"
 )
 
-func writeCSV(bucketName string) error {
+func writeBucketCSV(bucketName string) error {
 	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
@@ -30,7 +30,31 @@ func writeCSV(bucketName string) error {
 	return nil
 }
 
-func readCSV() ([][]string, error) {
+//
+func writeObjectCSV(bucketName string, o ObjectMD) error {
+	file, err := os.OpenFile(config.Directory+"/"+bucketName+"/objects.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	if fileInfo, err := os.Stat(file.Name()); err != nil {
+		return err
+	} else if fileInfo.Size() == 0 {
+		writer.Write([]string{"ObjectKey", "Size", "ContentType", "LastModified"})
+	}
+
+	err = writer.Write([]string{o.ObjectKey, o.Size, o.ContentType, o.LastModified})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func readBucketCSV() ([][]string, error) {
 	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_CREATE, 0o644)
 	if err != nil {
 		return nil, err
@@ -80,7 +104,7 @@ func deleteRecord(target string) error {
 }
 
 func elementExists(element string) (bool, error) {
-	records, err := readCSV()
+	records, err := readBucketCSV()
 	if err != nil {
 		return false, err
 	}
