@@ -53,8 +53,10 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 	contentLength := r.Header.Get("Content-Length")
 
 	if contentType == "" {
-		writeXMLError(w, "BadRequest", "Error: Content-Type cannot be empty.", http.StatusBadRequest)
-		return
+		idx := strings.LastIndex(objectKey, ".")
+		if idx != -1 {
+			contentType = objectKey[idx+1:]
+		}
 	}
 	if contentLength == "" {
 		fileInfo, err := file.Stat()
