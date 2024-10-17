@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"os"
 	"time"
+
 	"triple-s/config"
 )
 
@@ -30,7 +31,7 @@ func writeBucketCSV(bucketName string) error {
 	return nil
 }
 
-//
+// not finished
 func writeObjectCSV(bucketName string, o ObjectMD) error {
 	path := "/" + bucketName + "/objects.csv"
 	file, err := os.OpenFile(config.Directory+path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)

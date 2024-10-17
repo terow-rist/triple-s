@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"triple-s/config"
@@ -24,17 +25,14 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bucketName := ""
-	for _, v := range r.URL.Path[len("/put/"):] {
-		if v == '/' {
-			break
-		}
-		bucketName += string(v)
-	}
-	if bucketName == "" {
-		writeXMLError(w, "BadRequest", "Error: bucket name cannot be empty.", http.StatusBadRequest)
+	path := strings.TrimPrefix(r.URL.Path, "/put/")
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) != 2 {
+		writeXMLError(w, "BadRequest", "Error: Invalid URL format.", http.StatusBadRequest)
 		return
 	}
+	bucketName, objectKey := parts[0], parts[1]
+
 	is, err := elementExists("/buckets.csv", bucketName)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
@@ -42,12 +40,6 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 	}
 	if !is {
 		writeXMLError(w, "BadRequest", "Error: bucket name does not exists$.", http.StatusBadRequest)
-		return
-	}
-
-	objectKey := r.URL.Path[len("/put/"+bucketName)+1:]
-	if objectKey == "" {
-		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
 		return
 	}
 
@@ -95,17 +87,15 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "MethodNotAllowed", "Error: only GET command in /get/ url.", http.StatusMethodNotAllowed)
 		return
 	}
-	bucketName := ""
-	for _, v := range r.URL.Path[len("/put/"):] {
-		if v == '/' {
-			break
-		}
-		bucketName += string(v)
-	}
-	if bucketName == "" {
-		writeXMLError(w, "BadRequest", "Error: bucket name cannot be empty.", http.StatusBadRequest)
+	path := strings.TrimPrefix(r.URL.Path, "/put/")
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) != 2 {
+		writeXMLError(w, "BadRequest", "Error: Invalid URL format.", http.StatusBadRequest)
 		return
 	}
+	bucketName, objectKey := parts[0], parts[1]
+
+	// validate bucket existence
 	is, err := elementExists("/buckets.csv", bucketName)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
@@ -116,12 +106,7 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectKey := r.URL.Path[len("/put/"+bucketName)+1:]
-	if objectKey == "" {
-		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
-		return
-	}
-
+	// validate object existence
 	is, err = elementExists("/"+bucketName+"objects.csv", objectKey)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
@@ -131,4 +116,5 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "BadRequest", "Error: object key does not exists$.", http.StatusBadRequest)
 		return
 	}
+	//..
 }
