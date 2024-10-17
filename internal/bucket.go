@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
 	"triple-s/config"
 )
 
@@ -25,19 +26,7 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// checking that --dir=path exists
-	if _, err = os.Stat(config.Directory); os.IsNotExist(err) {
-		err = os.Mkdir(config.Directory, 0o755)
-		if err != nil {
-			writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-	// checking that '--dir=' is standard or not
-	if isStandardPackage(config.Directory) {
-		writeXMLError(w, "BadRequest", "Error: directory(--dir=) cannot be one of the used ones.", http.StatusBadRequest)
-		return
-	}
+
 	// checking the uniqueness of bucket name
 	elementIn, err := elementExists("/buckets.csv", bucketName)
 	if err != nil {
@@ -74,11 +63,6 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "Conflict", "Error: too much data after '/get/'", http.StatusConflict)
 		return
 	}
-	// checking that '--dir=' is standard or not
-	if isStandardPackage(config.Directory) {
-		writeXMLError(w, "BadRequest", "Error: directory(--dir=) cannot be one of the used ones.", http.StatusBadRequest)
-		return
-	}
 	xmlData, err := listAllMyBucketsResult()
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
@@ -100,11 +84,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "BadRequest", "Error: bucket name cannot be empty.", http.StatusBadRequest)
 		return
 	}
-	// checking that '--dir=' is standard or not
-	if isStandardPackage(config.Directory) {
-		writeXMLError(w, "BadRequest", "Error: directory(--dir=) cannot be one of the used ones.", http.StatusBadRequest)
-		return
-	}
+
 	// handle if bucket does not exists
 	is, err := isBucketEmpty(config.Directory)
 	if err != nil {

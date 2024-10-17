@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
 	"triple-s/config"
 )
 
@@ -41,19 +42,6 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 	}
 	if !is {
 		writeXMLError(w, "BadRequest", "Error: bucket name does not exists$.", http.StatusBadRequest)
-		return
-	}
-	// checking that --dir=path exists
-	if _, err := os.Stat(config.Directory); os.IsNotExist(err) {
-		err = os.Mkdir(config.Directory, 0o755)
-		if err != nil {
-			writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-	// checking that '--dir=' is standard or not
-	if isStandardPackage(config.Directory) {
-		writeXMLError(w, "BadRequest", "Error: directory(--dir=) cannot be one of the used ones.", http.StatusBadRequest)
 		return
 	}
 
@@ -128,19 +116,6 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// checking that --dir=path exists
-	if _, err := os.Stat(config.Directory); os.IsNotExist(err) {
-		err = os.Mkdir(config.Directory, 0o755)
-		if err != nil {
-			writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-	// checking that '--dir=' is standard or not
-	if isStandardPackage(config.Directory) {
-		writeXMLError(w, "BadRequest", "Error: directory(--dir=) cannot be one of the used ones.", http.StatusBadRequest)
-		return
-	}
 	objectKey := r.URL.Path[len("/put/"+bucketName)+1:]
 	if objectKey == "" {
 		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)

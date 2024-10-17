@@ -4,14 +4,18 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
 	"triple-s/config"
 	"triple-s/internal"
 )
 
 func main() {
+	if err := config.ValidateDirectory(); err != nil {
+		log.Fatal(err)
+	}
+
 	mux := http.NewServeMux()
 	log.Printf("http://localhost:%s/\n", config.PortNumber)
-	// mux.HandleFunc("/put/", internal.PutHandler)
 
 	mux.HandleFunc("/put/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.Count(strings.TrimPrefix(r.URL.Path, "/put/"), "/") == 0 {
