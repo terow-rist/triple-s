@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -75,7 +77,7 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	updateBucketCSV(bucketName)
+	updateBucketCSV("Acitve", bucketName)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -149,7 +151,8 @@ func DeleteAnObject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate object existence
-	is, err = elementExists("/"+bucketName+"/objects.csv", objectKey)
+	pathToCSV := "/" + bucketName + "/objects.csv"
+	is, err = elementExists(pathToCSV, objectKey)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -163,10 +166,28 @@ func DeleteAnObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = deleteRecord("/"+bucketName+"/objects.csv", objectKey)
+	err = deleteRecord(pathToCSV, objectKey)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	file, err := os.OpenFile(config.Directory+pathToCSV, os.O_RDONLY, 0o644)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println(len(records))
+	if len(records) == 1 {
+		updateBucketCSV("MarkedForDeletion", bucketName)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

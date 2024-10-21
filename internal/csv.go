@@ -31,7 +31,7 @@ func writeBucketCSV(bucketName string) error {
 	return nil
 }
 
-func updateBucketCSV(bucketName string) error {
+func updateBucketCSV(status string, bucketName string) error {
 	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_RDWR, 0o644)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func updateBucketCSV(bucketName string) error {
 		if len(record) > 0 && record[0] != "Name" && record[0] == bucketName {
 			newRecord := []string{record[0], record[1]}
 			newRecord = append(newRecord, time.Now().Format("2006/01/02 15:04:05"))
-			newRecord = append(newRecord, "Active")
+			newRecord = append(newRecord, status)
 			updatedRecords = append(updatedRecords, newRecord)
 			continue
 		}
