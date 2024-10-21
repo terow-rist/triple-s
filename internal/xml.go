@@ -28,6 +28,11 @@ type ErrorResponse struct {
 	Message    string   `xml:"Message"`
 }
 
+type RetrieveAnObject struct {
+	XMLName    xml.Name `xml:"RetrieveAnObject"`
+	ObjectData string   `xml:"ObjectData"`
+}
+
 func listAllMyBucketsResult() ([]byte, error) {
 	records, err := readCSV("/buckets.csv")
 	if err != nil {
@@ -59,6 +64,31 @@ func listAllMyBucketsResult() ([]byte, error) {
 		return nil, err
 	}
 	xmlData = append(xmlData, '\n')
+	return xmlData, nil
+}
+
+func listObjectData(bucketName, objectKey string) ([]byte, error) {
+	records, err := readCSV("/" + bucketName + "/" + "objects.csv")
+	if err != nil {
+		return nil, err
+	}
+
+	var size string
+	for _, v := range records {
+		if v[0] == objectKey {
+			size = v[1]
+			break
+		}
+	}
+	objectData := RetrieveAnObject{
+		ObjectData: " [" + size + " bytes of object data] ",
+	}
+	xmlData, err := xml.MarshalIndent(objectData, "", "   ")
+	if err != nil {
+		return nil, err
+	}
+	xmlData = append(xmlData, '\n')
+
 	return xmlData, nil
 }
 
