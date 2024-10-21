@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,13 +26,11 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := strings.TrimPrefix(r.URL.Path, "/put/")
-	parts := strings.SplitN(path, "/", 2)
-	if len(parts) != 2 {
-		writeXMLError(w, "BadRequest", "Error: Invalid URL format.", http.StatusBadRequest)
+	bucketName, objectKey, err := checkPathURL("/put/", r)
+	if err != nil {
+		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	bucketName, objectKey := parts[0], parts[1]
 	// validate for len of bucket or object
 	if objectKey == "" {
 		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
@@ -86,13 +85,11 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "MethodNotAllowed", "Error: only GET command in /get/ url.", http.StatusMethodNotAllowed)
 		return
 	}
-	path := strings.TrimPrefix(r.URL.Path, "/get/")
-	parts := strings.SplitN(path, "/", 2)
-	if len(parts) != 2 {
-		writeXMLError(w, "BadRequest", "Error: Invalid URL format.", http.StatusBadRequest)
+	bucketName, objectKey, err := checkPathURL("/get/", r)
+	if err != nil {
+		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	bucketName, objectKey := parts[0], parts[1]
 	// validate for len of object
 	if objectKey == "" {
 		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
@@ -127,4 +124,58 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
 	w.Write(xmlData)
+}
+
+func DeleteAnObject(w http.ResponseWriter, r *http.Request) {
+	bucketName, objectKey, err := checkPathURL("/delete/", r)
+	if err != nil {
+		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// validate for len of object
+	if objectKey == "" {
+		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
+		return
+	}
+	// validate bucket existence
+	is, err := elementExists("/buckets.csv", bucketName)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !is {
+		writeXMLError(w, "BadRequest", "Error: bucket name does not exists$.", http.StatusBadRequest)
+		return
+	}
+
+	// validate object existence
+	is, err = elementExists("/"+bucketName+"/objects.csv", objectKey)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !is {
+		writeXMLError(w, "BadRequest", "Error: object key does not exists$.", http.StatusBadRequest)
+		return
+	}
+	err = os.Remove(config.Directory + "/" + bucketName + "/" + objectKey)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = deleteRecord("/"+bucketName+"/objects.csv", objectKey)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func checkPathURL(what string, r *http.Request) (string, string, error) {
+	path := strings.TrimPrefix(r.URL.Path, what)
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) != 2 {
+		return "", "", errors.New("Invalid URL format.")
+	}
+	return parts[0], parts[1], nil
 }

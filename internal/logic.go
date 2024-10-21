@@ -11,19 +11,19 @@ func validateBucketName(name string) error {
 	ipFormat := regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}$`)
 
 	if len(name) < 3 || len(name) > 63 {
-		return errors.New("Error: Bucket name must be between 3 and 63 characters long.")
+		return errors.New("Bucket name must be between 3 and 63 characters long.")
 	}
 
 	if !validBucketName.MatchString(name) {
-		return errors.New("Error: Bucket name contains invalid characters.")
+		return errors.New("Bucket name contains invalid characters.")
 	}
 
 	if ipFormat.MatchString(name) {
-		return errors.New("Error: Bucket name must not be formatted like an IP address.")
+		return errors.New("Bucket name must not be formatted like an IP address.")
 	}
 
 	if checkConsecutive(name) {
-		return errors.New("Error: Bucket must not contain two consecutive periods or dashes.")
+		return errors.New("Bucket must not contain two consecutive periods or dashes.")
 	}
 
 	return nil

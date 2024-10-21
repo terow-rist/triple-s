@@ -32,6 +32,14 @@ func main() {
 			internal.RetrieveObject(w, r)
 		}
 	})
-	mux.HandleFunc("/delete/", internal.DeleteHandler)
+
+	mux.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Count(strings.TrimPrefix(r.URL.Path, "/delete/"), "/") == 0 {
+			internal.DeleteHandler(w, r)
+		} else {
+			internal.DeleteAnObject(w, r)
+		}
+	})
+	// mux.HandleFunc("/delete/", internal.DeleteHandler)
 	log.Fatal(http.ListenAndServe(":"+config.PortNumber, mux))
 }

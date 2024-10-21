@@ -24,7 +24,7 @@ func writeBucketCSV(bucketName string) error {
 		writer.Write([]string{"Name", "DateOfCreation", "LastModifiedTime", "Status"})
 	}
 
-	err = writer.Write([]string{bucketName, time.Now().Format("2006/01/02 15:04:05"), time.Now().Format("2006/01/02 15:04:05"), "active"})
+	err = writer.Write([]string{bucketName, time.Now().Format("2006/01/02 15:04:05"), time.Now().Format("2006/01/02 15:04:05"), "MarkedForDeletion"})
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func updateBucketCSV(bucketName string) error {
 		if len(record) > 0 && record[0] != "Name" && record[0] == bucketName {
 			newRecord := []string{record[0], record[1]}
 			newRecord = append(newRecord, time.Now().Format("2006/01/02 15:04:05"))
-			newRecord = append(newRecord, record[3])
+			newRecord = append(newRecord, "Active")
 			updatedRecords = append(updatedRecords, newRecord)
 			continue
 		}
@@ -124,7 +124,7 @@ func deleteRecord(path, target string) error {
 
 	var updatedRecords [][]string
 	for _, record := range records {
-		if len(record) > 0 && record[0] != "Name" && record[0] == target {
+		if len(record) > 0 && record[0] == target {
 			continue
 		}
 		updatedRecords = append(updatedRecords, record)
