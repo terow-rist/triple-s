@@ -31,7 +31,41 @@ func writeBucketCSV(bucketName string) error {
 	return nil
 }
 
-// not finished
+func updateBucketCSV(bucketName string) error {
+	file, err := os.OpenFile(config.Directory+"/buckets.csv", os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+
+	var updatedRecords [][]string
+	for _, record := range records {
+		if len(record) > 0 && record[0] != "Name" && record[0] == bucketName {
+			newRecord := []string{record[0], record[1]}
+			newRecord = append(newRecord, time.Now().Format("2006/01/02 15:04:05"))
+			newRecord = append(newRecord, record[3])
+			updatedRecords = append(updatedRecords, newRecord)
+			continue
+		}
+		updatedRecords = append(updatedRecords, record)
+	}
+	if file.Truncate(0) != nil {
+		return err
+	}
+	if _, err = file.Seek(0, 0); err != nil {
+		return err
+	}
+
+	writer := csv.NewWriter(file)
+	err = writer.WriteAll(updatedRecords)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func writeObjectCSV(bucketName string, o ObjectMD) error {
 	path := "/" + bucketName + "/objects.csv"
 	file, err := os.OpenFile(config.Directory+path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)

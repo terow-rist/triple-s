@@ -32,7 +32,7 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bucketName, objectKey := parts[0], parts[1]
-	//validate for len of bucket or object
+	// validate for len of bucket or object
 	if objectKey == "" {
 		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
 		return
@@ -50,11 +50,6 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 
 	contentType := r.Header.Get("Content-Type")
 	contentLength := r.Header.Get("Content-Length")
-
-	if contentType == "" {
-		writeXMLError(w, "BadRequest", "Error: Content-Type cannot be empty.", http.StatusBadRequest)
-		return
-	}
 
 	file, err := os.Create(filepath.Join(config.Directory+"/"+bucketName, objectKey))
 	if err != nil {
@@ -81,11 +76,10 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	updateBucketCSV(bucketName)
 	w.WriteHeader(http.StatusOK)
 }
 
-// NOT FINISHED XML RESPONSE [434234 bytes of object data]!!!
 func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 	// http errors checking
 	if r.Method != http.MethodGet {
@@ -99,7 +93,7 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	bucketName, objectKey := parts[0], parts[1]
-	//validate for len of object
+	// validate for len of object
 	if objectKey == "" {
 		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
 		return
@@ -133,5 +127,4 @@ func RetrieveObject(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	w.WriteHeader(http.StatusOK)
 	w.Write(xmlData)
-
 }
