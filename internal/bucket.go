@@ -104,11 +104,11 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if elementIn {
-		if is, err = isBucketEmpty(path); err != nil {
+		if is, err = bucketForDeletion("/buckets.csv", target); err != nil {
 			writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 			return
 		} else if is {
-			err = os.Remove(path)
+			err = os.RemoveAll(path)
 			if err != nil {
 				writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 				return

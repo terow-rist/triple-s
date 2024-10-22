@@ -159,3 +159,18 @@ func elementExists(path, element string) (bool, error) {
 	}
 	return false, nil
 }
+
+func bucketForDeletion(path, bucketName string) (bool, error) {
+	records, err := readCSV(path)
+	if err != nil {
+		return false, err
+	}
+	for _, record := range records {
+		if record[0] == bucketName {
+			if record[3] == "MarkedForDeletion" {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}

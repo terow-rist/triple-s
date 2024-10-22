@@ -3,7 +3,6 @@ package internal
 import (
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -185,7 +184,6 @@ func DeleteAnObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Println(len(records))
 	if len(records) == 1 {
 		updateBucketCSV("MarkedForDeletion", bucketName)
 	}
