@@ -3,7 +3,12 @@ package internal
 import (
 	"encoding/xml"
 	"errors"
+	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
+
+	"triple-s/config"
 )
 
 type Bucket struct {
@@ -28,9 +33,9 @@ type ErrorResponse struct {
 	Message    string   `xml:"Message"`
 }
 
-type RetrieveAnObject struct {
-	XMLName    xml.Name `xml:"RetrieveAnObject"`
-	ObjectData string   `xml:"ObjectData"`
+type Response struct {
+	StatusCode string `xml:"StatusCode"`
+	Message    string `xml:"Message"`
 }
 
 func listAllMyBucketsResult() ([]byte, error) {
@@ -67,29 +72,35 @@ func listAllMyBucketsResult() ([]byte, error) {
 	return xmlData, nil
 }
 
-func listObjectData(bucketName, objectKey string) ([]byte, error) {
-	records, err := readCSV("/" + bucketName + "/" + "objects.csv")
+func listObjectData(w http.ResponseWriter, r *http.Request, bucketName, objectKey string) error {
+	// Construct the file path
+	filePath := filepath.Join(config.Directory, bucketName, objectKey)
+
+	// Open the file
+	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	defer file.Close()
+
+	// Get file info for modification time
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return err
 	}
 
-	var size string
-	for _, v := range records {
-		if v[0] == objectKey {
-			size = v[1]
-			break
-		}
+	// Detect the content type based on the file extension
+	ext := filepath.Ext(filePath)
+	contentType := mime.TypeByExtension(ext)
+	if contentType == "" {
+		// Fallback content type if not determined by extension
+		contentType = "application/octet-stream"
 	}
-	objectData := RetrieveAnObject{
-		ObjectData: " [" + size + " bytes of object data] ",
-	}
-	xmlData, err := xml.MarshalIndent(objectData, "", "   ")
-	if err != nil {
-		return nil, err
-	}
-	xmlData = append(xmlData, '\n')
+	w.Header().Set("Content-Type", contentType)
 
-	return xmlData, nil
+	// Serve the content using http.ServeContent
+	http.ServeContent(w, r, objectKey, fileInfo.ModTime(), file)
+	return nil
 }
 
 func writeXMLError(w http.ResponseWriter, statusCode, message string, code int) {
@@ -101,6 +112,23 @@ func writeXMLError(w http.ResponseWriter, statusCode, message string, code int) 
 	if err != nil {
 		errorResponse.StatusCode = "Internal Server Error"
 		errorResponse.Message = "Error: error in xml.MarshalIndent"
+	}
+	xmlData = append(xmlData, '\n')
+	w.Header().Set("Content-Type", "application/xml")
+	w.WriteHeader(code)
+	w.Write(xmlData)
+}
+
+func writeXMLResponse(w http.ResponseWriter, statusCode, message string, code int) {
+	response := Response{
+		Message:    message,
+		StatusCode: statusCode,
+	}
+
+	xmlData, err := xml.MarshalIndent(response, "", "   ")
+	if err != nil {
+		writeXMLError(w, "Internal Server Error", "Error: error in xml.MarshalIndent", code)
+		return
 	}
 	xmlData = append(xmlData, '\n')
 	w.Header().Set("Content-Type", "application/xml")

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
 	"triple-s/config"
 	"triple-s/internal"
 )
@@ -39,6 +40,5 @@ func main() {
 			internal.DeleteAnObject(w, r)
 		}
 	})
-	// mux.HandleFunc("/delete/", internal.DeleteHandler)
 	log.Fatal(http.ListenAndServe(":"+config.PortNumber, mux))
 }

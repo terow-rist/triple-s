@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
 	"triple-s/config"
 )
 
@@ -49,7 +50,7 @@ func PutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// the finish line
-	w.WriteHeader(http.StatusOK)
+	writeXMLResponse(w, "OK", "Successful creation of bucket!", http.StatusOK)
 }
 
 func GetHandler(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +60,7 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(r.URL.Path[len("/get/"):]) > 0 {
-		writeXMLError(w, "Conflict", "Error: too much data after '/get/'", http.StatusConflict)
+		writeXMLError(w, "Conflict", "Error: too much data after /get/", http.StatusConflict)
 		return
 	}
 	xmlData, err := listAllMyBucketsResult()

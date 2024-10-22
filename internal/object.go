@@ -3,12 +3,14 @@ package internal
 import (
 	"encoding/csv"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
 	"triple-s/config"
 )
 
@@ -31,11 +33,12 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// validate for len of bucket or object
+
 	if objectKey == "" {
 		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
 		return
 	}
+
 	// validate bucket existence
 	is, err := elementExists("/buckets.csv", bucketName)
 	if err != nil {
@@ -43,27 +46,35 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !is {
-		writeXMLError(w, "BadRequest", "Error: bucket name does not exists$.", http.StatusBadRequest)
+		writeXMLError(w, "BadRequest", "Error: bucket name does not exist.", http.StatusBadRequest)
 		return
 	}
 
-	contentType := r.Header.Get("Content-Type")
-	contentLength := r.Header.Get("Content-Length")
-
+	// Open file for writing
 	file, err := os.Create(filepath.Join(config.Directory+"/"+bucketName, objectKey))
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if contentLength == "" {
-		fileInfo, err := file.Stat()
-		if err != nil {
-			writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		contentLength = strconv.FormatInt(fileInfo.Size(), 10)
+	defer file.Close()
+
+	// Write the file content from the request body to the file
+	_, err = io.Copy(file, r.Body)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error writing file: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
+	// Get the content length from the file after writing
+	fileInfo, err := file.Stat()
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	contentLength := strconv.FormatInt(fileInfo.Size(), 10)
+	contentType := r.Header.Get("Content-Type")
+
+	// Save object metadata in CSV
 	o := ObjectMD{
 		ObjectKey:    objectKey,
 		Size:         contentLength,
@@ -75,58 +86,89 @@ func UploadNewObject(w http.ResponseWriter, r *http.Request) {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	updateBucketCSV("Acitve", bucketName)
-	w.WriteHeader(http.StatusOK)
+
+	updateBucketCSV("Active", bucketName)
+	writeXMLResponse(w, "OK", "Successful creation of object!", http.StatusOK)
 }
 
 func RetrieveObject(w http.ResponseWriter, r *http.Request) {
-	// http errors checking
+	// Check if the method is GET
 	if r.Method != http.MethodGet {
 		writeXMLError(w, "MethodNotAllowed", "Error: only GET command in /get/ url.", http.StatusMethodNotAllowed)
 		return
 	}
+
+	// Parse bucket name and object key
 	bucketName, objectKey, err := checkPathURL("/get/", r)
 	if err != nil {
 		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// validate for len of object
+
+	// Validate object key
 	if objectKey == "" {
 		writeXMLError(w, "BadRequest", "Error: object key cannot be empty.", http.StatusBadRequest)
 		return
 	}
-	// validate bucket existence
+
+	// Validate bucket existence
 	is, err := elementExists("/buckets.csv", bucketName)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !is {
-		writeXMLError(w, "BadRequest", "Error: bucket name does not exists$.", http.StatusBadRequest)
+		writeXMLError(w, "BadRequest", "Error: bucket name does not exist.", http.StatusBadRequest)
 		return
 	}
 
-	// validate object existence
+	// Validate object existence
 	is, err = elementExists("/"+bucketName+"/objects.csv", objectKey)
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !is {
-		writeXMLError(w, "BadRequest", "Error: object key does not exists$.", http.StatusBadRequest)
+		writeXMLError(w, "BadRequest", "Error: object key does not exist.", http.StatusBadRequest)
 		return
 	}
-	xmlData, err := listObjectData(bucketName, objectKey)
+
+	// Get the object metadata (e.g., Content-Type) from the CSV file
+	records, err := readCSV("/" + bucketName + "/objects.csv")
 	if err != nil {
 		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/xml")
-	w.WriteHeader(http.StatusOK)
-	w.Write(xmlData)
+
+	var contentType string
+	for _, v := range records {
+		if v[0] == objectKey {
+			contentType = v[2] // Assuming column 2 has Content-Type
+			break
+		}
+	}
+
+	// Open and serve the object
+	filePath := filepath.Join(config.Directory, bucketName, objectKey)
+	file, err := os.Open(filePath)
+	if err != nil {
+		writeXMLError(w, "InternalServerError", "Error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	// Set the correct Content-Type for the object
+	w.Header().Set("Content-Type", contentType)
+
+	// Serve the file content
+	http.ServeContent(w, r, objectKey, time.Now(), file)
 }
 
 func DeleteAnObject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		writeXMLError(w, "MethodNotAllowed", "Error: only DELETE command in /delete/ url.", http.StatusMethodNotAllowed)
+		return
+	}
 	bucketName, objectKey, err := checkPathURL("/delete/", r)
 	if err != nil {
 		writeXMLError(w, "BadRequest", "Error: "+err.Error(), http.StatusBadRequest)
