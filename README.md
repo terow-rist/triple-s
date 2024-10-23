@@ -1,7 +1,7 @@
 # triple-s
 ## For PUT:
-    > http://localhost:8080/put/{BucketName}
-    > http://localhost:8080/put/{BucketName}/{ObjectKey}
+**http://localhost:8080/_put_/{BucketName}**
+**http://localhost:8080/put/{BucketName}/{ObjectKey}**
 ## For GET:
     > http://localhost:8080/get/
     > http://localhost:8080/get/{BucketName}/{ObjectKey}
